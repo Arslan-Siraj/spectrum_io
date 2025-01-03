@@ -29,8 +29,18 @@ def _read_and_process_id_xml(input_file: Path, top: int = 0):
     rows = []
     for peptide_id in pep_ids:
         spectrum_id = peptide_id.getMetaValue("spectrum_reference")
-        scan_nr = spectrum_id[spectrum_id.rfind("=") + 1 :]
-
+      
+        if isinstance(spectrum_id, str):
+            # handle string type
+            scan_nr = spectrum_id[spectrum_id.rfind("=") + 1 :]
+        elif isinstance(spectrum_id, bytes):
+            # decode bytes to string and handle
+            decoded = spectrum_id.decode("utf-8")
+            scan_nr = decoded[decoded.rfind("=") + 1 :]
+        else:
+            # raise error for unsupported types
+            raise TypeError(f"spectrum_reference must be a str or bytes, but got {type(spectrum_id)}")
+        
         hits = peptide_id.getHits()
 
         psm_index = 1
@@ -98,23 +108,7 @@ def _read_and_process_id_xml(input_file: Path, top: int = 0):
     df["Label"] = df["Label"].astype(bool)
 
     for prot_id in prot_ids:
-        prot_id_meta_value = (prot_id.getMetaValue("spectra_data"))
-        print("prot_id_meta_value : ",  prot_id_meta_value)
-        print("type( prot_id_meta_value): ", type( prot_id_meta_value))
-
-        # Validate that prot_id_meta_value is a non-empty list
-        if isinstance(prot_id_meta_value, list) and prot_id_meta_value:
-            first_element = prot_id_meta_value[0]
-            
-            if isinstance(first_element, bytes):
-                # Decode bytes to string
-                raw_file = first_element.decode('utf-8').split('/')[-1].split('.')[0]
-                print("raw_file:", raw_file)
-            else:
-                raise TypeError(f"Expected bytes in the list, but got {type(first_element)}")
-        else:
-            raise TypeError("spectra_data must be a non-empty list of bytes")
-        
+        raw_file = (prot_id.getMetaValue("spectra_data"))[0].decode("utf-8").split("/")[-1].split(".")[0]
         break
 
     df["raw_file"] = raw_file
