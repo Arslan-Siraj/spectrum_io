@@ -108,7 +108,20 @@ def _read_and_process_id_xml(input_file: Path, top: int = 0):
     df["Label"] = df["Label"].astype(bool)
 
     for prot_id in prot_ids:
-        raw_file = (prot_id.getMetaValue("spectra_data"))[0].decode("utf-8").split("/")[-1].split(".")[0]
+        prot_id_meta_value = (prot_id.getMetaValue("spectra_data"))
+
+        # Validate that prot_id_meta_value is a non-empty list
+        if isinstance(prot_id_meta_value, list) and prot_id_meta_value:
+            first_element = prot_id_meta_value[0]
+            
+            if isinstance(first_element, bytes):
+                # Decode bytes to string
+                raw_file = first_element.decode('utf-8').split('/')[-1].split('.')[0]
+            else:
+                raise TypeError(f"Expected bytes in the list, but got {type(first_element)}")
+        else:
+            raise TypeError("spectra_data must be a non-empty list of bytes")
+        
         break
 
     df["raw_file"] = raw_file
